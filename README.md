@@ -10,8 +10,13 @@ The dataset associated with this project is too large for direct inclusion in th
 
 ```         
 LA_Environmental_Justice_Redlining_Impact
+│   .gitignore
 │   README.md
-│   Rmd/Proj files    
+│   Rmd/Proj files 
+│
+└───Report
+    │   LA_Environmental_Justice_Redlining_Impact.html
+    │   HOLC_map
 │
 └───data
     │   column descriptions: EJSCREEN_2023_BG_Columns.xlsx
@@ -34,3 +39,7 @@ The R Markdown files contain a detailed breakdown of the analysis process, inclu
 - Spatial analysis of redlining impact on environmental factors.
 - Examination of biodiversity data in relation to historical redlining areas.
 - Visualizations and interpretation of findings.
+
+## Redlining Map Visualization
+Mapping redlining boundaries, colored by HOLC grade.
+![HOLC Map](Report/HOLC_map.png)

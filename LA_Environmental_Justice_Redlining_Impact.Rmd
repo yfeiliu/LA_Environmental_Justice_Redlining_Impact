@@ -59,7 +59,9 @@ Data from the [Global Biodiversity Information Facility](gbif.org)  on bird obse
 ### Data import and Prepararion
 
 #### Load relevant packages
+In this section, we load necessary R libraries for spatial data manipulation, visualization, and general data processing. 
 ```{r package, message=FALSE, warning=FALSE}
+# Load libraries
 library(sf)
 library(tmap)
 library(tidyverse)
@@ -67,20 +69,22 @@ library(knitr)
 library(ggplot2)
 ```
 
-#### Data Reading 
+#### Datasets Reading 
+We focus on three main datasets for this analysis: EJScreen environmental data, historical redlining data, and bird observation data. Each dataset is read and prepared for subsequent analysis.
+
 ```{r read data, message=FALSE, warning=FALSE}
-# read in EJScreen data and filter to LA
+# Read in EJScreen data and filter to LA
 LA <- st_read("data/EJSCREEN_2023_BG_StatePct_with_AS_CNMI_GU_VI.gdb/",
               query = "SELECT * FROM EJSCREEN_StatePctiles_with_AS_CNMI_GU_VI\
               WHERE CNTY_NAME = 'Los Angeles County'", 
               quiet = TRUE)
 
-# import redlining data
+# Read in redlining data
 LA_redlining <- st_read("https://dsl.richmond.edu/panorama/redlining/static/citiesData/CALosAngeles1939/geojson.json",
               quiet = TRUE) %>%
   st_make_valid()
 
-# read in bird data
+# Read in bird data
 bird <- st_read("data/gbif-birds-LA", quiet = TRUE) %>% 
   filter(year == 2022)
 ```
@@ -88,21 +92,21 @@ bird <- st_read("data/gbif-birds-LA", quiet = TRUE) %>%
 ### Investigate the legacy of redlining in current environmental (in)justice
 #### Waste Water Discharge Analysis
 
-The objective of this section is to identify census block groups with high wastewater discharge. We will make a map of wastewater discharge by census block groups and indicate which census block groups are above the 95th percentile of national values for wastewater discharge by adding a centroid.
+In this section, we delve into the spatial distribution of wastewater discharge in Los Angeles County. The focus is on identifying census block groups with high wastewater discharge, particularly those exceeding the 95th percentile nationally. We will make a map of wastewater discharge by census block groups and indicate high wastewater discharge census block groups by adding a centroid.
 
 ```{r waste water, message=FALSE}
-# select wastewater data
+# Select wastewater data
 wastewater <- LA %>% 
   select(ID, P_PWDIS)
 
-# filter to census block groups > 95th wastewater discharge
+# Filtering census block groups > 95th wastewater discharge
 ab_wastewater <- wastewater %>% 
   filter(P_PWDIS > 95)
 
-# create centroids of wastewater
+# Creating centroids for visualization
 abww_centroid <- st_centroid(ab_wastewater)
 
-# make map of wastewater discharge
+# Mapping wastewater discharge
 breaks_fill = c(0, 25, 50, 75, 95, 100)
 tm_shape(wastewater) +
   tm_fill("P_PWDIS", 
@@ -124,41 +128,38 @@ tm_shape(wastewater) +
 
 #### Socioeconomic and Environmental Impact Analysis
 
-The objective of this section is to find low-income population percentage and environmental factors across census block groups. 
+In this section, we aim to examine the socioeconomic and environmental factors across census block groups in Los Angeles County. 
 
-First we will find the percent of low income census block groups. The census block groups that have less than 5% of the population is considered low income. 
+First we will evaluate the percentage of census block groups where less than 5% of the population is considered low income. This data helps in identifying areas with relatively higher economic status.
 
 ```{r cb1}
-# filter low income data
+# Filtering data for low income population
 cb1 <- LA %>% 
   filter(LOWINCPCT < 0.05) %>% 
   nrow()/nrow(LA)*100
 
-# print results
-print(paste("Percent of census block groups:", cb1, "%"))
+# Displaying the percentage
+print(paste("Percentage of census block groups:", cb1, "%"))
 ```
 
-Secondly, we will find the percent of census block groups that are:    
-- above the 80th percentile for Particulate Matter 2.5 AND  
-- above the 80th percentile for Superfund proximity
-
+Next, we assess the proportion of census block groups that simultaneously rank high (above the 80th percentile) in particulate matter (PM 2.5) concentration and proximity to Superfund sites. This analysis helps in identifying areas with compounded environmental challenges.
 ```{r cb2}
-# filter data
+# Filtering data for high environmental burden
 cb2 <- LA %>% 
   filter(P_D2_PM25 > 80) %>% 
   filter(P_D2_PNPL > 80) %>% 
   nrow()/nrow(LA)*100
 
-# print results
-print(paste("Percent of census block groups:", cb2, "%"))
+# Displaying the results
+print(paste("Percentage of census block groups:", cb2, "%"))
 ```
 
 #### Redlining Map Visualization
 
-We will make a map of historical redlining boundaries, colored by HOLC grade.
+To visually comprehend the extent of historical redlining in Los Angeles, we'll create a map delineating historical redlining boundaries based on their HOLC grades. This visualization aids in understanding the geographical distribution of redlining's impact.
 
 ```{r HOLC map}
-# map redlining
+# Mapping redlining colored by HOLC grades
 tm_shape(LA_redlining) +
   tm_fill("grade", title = "HOLC grade") +
   tm_borders() +
@@ -168,23 +169,23 @@ tm_shape(LA_redlining) +
 ```
 
 
-#### Finding the Number of Census Block Groups within HOLC Grades
+#### Analyzing Census Block Groups within HOLC Grades
 
-We will analyze census block groups overlap with historical redlining areas. 
+We will analyze census block groups overlap with historical redlining areas to understand how current census block groups correlate with historically redlined areas. 
 
 ```{r num_cb_in_rd}
-# Transform data to same CRS
+# Transforming LA data to same CRS
 LA <- st_transform(LA, crs = st_crs(LA_redlining))
 
-# filter the CBG in redlining
+# Filtering CBG in redlining
 LA_in_rd <- LA %>% 
   st_filter(y = LA_redlining, .predicate = st_intersects)
 
-# print results
+# Displaying the number of affected census block groups
 print(paste("Number of census block groups that fall within areas with HOLC grades:", 
           nrow(LA_in_rd)))
 
-# Check LA_in_rd by visualizing
+# Checking LA_in_rd by visualizing
 tm_shape(LA) +
   tm_borders(col = "#8080804D") +
   tm_shape(LA_redlining) +
@@ -195,17 +196,19 @@ tm_shape(LA) +
 
 #### Summarizing Current Conditions within Redlining Categories
 
-We will summarize current conditions based on EJScreen data within historical redlining categories using the mean of the following variables:  
+We aim to compare and contrast current environmental and socio-economic conditions across different redlining categories. We will summarize current conditions based on EJScreen data within historical redlining categories using the mean of the following variables:  
 -% low income.  
 - percentile for particulate Matter 2.5.  
 - percentile for low life expectancy.  
 - percentile for air toxics cancer risk
 
+This summary will highlight disparities in environmental quality and socio-economic status influenced by historical redlining.
+
 ```{r summary}
-# spatial join
+# Joining CBG with redlining
 LA_in_rd_join <- st_join(LA_in_rd, LA_redlining, join = st_intersects, left = FALSE)
 
-# summary table
+# Generating summary statistics
 summary <- st_drop_geometry(LA_in_rd_join) %>% 
   filter(!is.na(grade)) %>% 
   group_by(grade) %>% 
@@ -216,6 +219,7 @@ summary <- st_drop_geometry(LA_in_rd_join) %>%
     p_air_cancer = mean(P_CANCER, na.rm = TRUE)
   )
 
+# Displaying the summary table
 kable(summary)
 ```
 
@@ -224,21 +228,21 @@ kable(summary)
 
 ### Investigate the legacy of redlining in biodiversity observations
 
-#### Analyzing Biodiversity Observations in Redlined Areas
+#### Biodiversity Observations Analysis
 
-For bird observations from 2022 that fall within neighborhoods with HOLC grads, we will find the percent of observations within each redlining categories and plot results. We need to make sure that the bird observations have the same CRS as redlining data.
+This analysis focuses on understanding how redlining may have influenced current patterns of bird biodiversity in Los Angeles. By examining bird observations from 2022 within neighborhoods categorized by HOLC grades, we aim to unveil potential disparities in biodiversity stemming from historical urban planning decisions.
 
 ```{r summary bird}
-# transform to same CRS as LA_redlining
+# Transforming bird data to same CRS as LA_redlining
 bird <- st_transform(bird, crs = st_crs(LA_redlining))
 
-# spatial join 
+# Spatially joining bird observations with redlining data
 bird_2022_in_rd <- st_join(bird, LA_redlining, join = st_intersects, left = FALSE)
 
-# total number of birds in the table
+# Calculating the total number of bird observations in redlined areas
 num_bird_in_rd <- nrow(bird_2022_in_rd %>% filter(!is.na(grade)))
 
-# summary table
+# Creating a summary table for bird observations by HOLC grades
 summary_bird <- st_drop_geometry(bird_2022_in_rd) %>% 
   filter(!is.na(grade)) %>% 
   group_by(grade) %>% 
@@ -247,16 +251,16 @@ summary_bird <- st_drop_geometry(bird_2022_in_rd) %>%
     percent = count/num_bird_in_rd
   )
 
-# print summary table
+# Displaying the summary table
 kable(summary_bird)
 ```
 
-#### Visualizing Bird Observation Data
+#### Visualizing of Bird Observation Data
 
-We will make a histogram for bird observation percents across HOLC grades in LA. 
+To better visualize the distribution of bird observations across different redlining categories, we will create a histogram. This visual representation will highlight any significant disparities in bird biodiversity related to historical redlining grades.
 
 ```{r plot bird}
-# plot histogram
+# Creating a histogram for bird observation percentages by HOLC grades
 bird_plot <-ggplot(summary_bird,
                    aes(x = grade, y = percent, fill = grade)) +
   geom_bar(stat = "identity") +
@@ -266,6 +270,7 @@ bird_plot <-ggplot(summary_bird,
        title = "Percent of 2022 Bird Obserations by HOLC Grades",
        fill = "HOLC Grade")
 
+# Displaying the histogram
 bird_plot
 ```
 
