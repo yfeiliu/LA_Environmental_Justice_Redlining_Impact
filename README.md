@@ -16,6 +16,7 @@ LA_Environmental_Justice_Redlining_Impact
 │
 └───Report
     │   LA_Environmental_Justice_Redlining_Impact.html
+    │   Blog_Post.html
     │   HOLC_map
 │
 └───data
